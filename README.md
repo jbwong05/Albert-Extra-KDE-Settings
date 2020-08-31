@@ -18,7 +18,7 @@ This plugin shares the same dependencies that are needed to build [Albert](https
 git clone --recursive https://github.com/albertlauncher/albert.git
 cd albert/plugins
 git submodule add https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
-./Extra-KDE-Settings/updateCMakeLists.sh
+./Albert-Extra-KDE-Settings/updateCMakeLists.sh
 cd ..
 mkdir albert-build
 cd albert-build
