@@ -1,0 +1,10 @@
+{
+    "id" :              "org.albert.extension.extrakdesettings",
+    "name" :            "Extra KDE Settings",
+    "version" :         "1.0",
+    "platform" :        "All",
+    "group" :           "Extensions",
+    "author" :          "Joshua Wong",
+    "dependencies" :    [],
+    "enabledbydefault": false
+}
