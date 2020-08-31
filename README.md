@@ -1,4 +1,4 @@
-# Extra KDE Settings
+# Albert Extra KDE Settings
 
 ## Description
 QPlugin for the [Albert Launcher](https://albertlauncher.github.io/) that exposes certain kcm settings modules to [Albert](https://albertlauncher.github.io/). The specific modules can be found by examining `src/extension.cpp`.
@@ -17,7 +17,7 @@ This plugin shares the same dependencies that are needed to build [Albert](https
 ```
 git clone --recursive https://github.com/albertlauncher/albert.git
 cd albert/plugins
-git submodule add https://github.com/jbwong05/Extra-KDE-Settings.git
+git submodule add https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
 ./Extra-KDE-Settings/updateCMakeLists.sh
 cd ..
 mkdir albert-build
