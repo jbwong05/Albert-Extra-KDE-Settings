@@ -1,0 +1,2 @@
+#!/bin/bash
+echo "\noption(BUILD_EXTRAKDESETTINGS "Build the extension" ON)\nif (BUILD_EXTRAKDESETTINGS)\n    add_subdirectory(extrakdesettings)\nendif()\n" >> ./CMakeLists.txt
