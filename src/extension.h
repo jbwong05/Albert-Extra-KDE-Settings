@@ -2,6 +2,9 @@
 #include <QObject>
 #include <memory>
 #include <string>
+#include <KService>
+#include <QSet>
+#include <QString>
 #include "albert/extension.h"
 #include "albert/queryhandler.h"
 
@@ -30,6 +33,7 @@ namespace ExtraKdeSettings {
         private:
 
             std::unique_ptr<Private> d;
+            QString generateQuery(const QString &strList) const;
 
     };
 }
