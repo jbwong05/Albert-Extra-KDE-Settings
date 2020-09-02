@@ -3,9 +3,6 @@
 #include <QRegularExpression>
 #include <KService>
 #include <KServiceTypeTrader>
-#include <array>
-#include <stdexcept>
-#include <string>
 #include "albert/util/standarditem.h"
 #include "xdg/iconlookup.h"
 #include "albert/util/shutil.h"
