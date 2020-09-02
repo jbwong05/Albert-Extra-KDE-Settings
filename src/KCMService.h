@@ -18,5 +18,6 @@ namespace ExtraKdeSettings {
             QString genericName;
             QString comment;
             QString iconName;
+            QSet<QString> aliases;
     };
 }

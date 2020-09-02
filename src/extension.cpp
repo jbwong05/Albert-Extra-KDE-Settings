@@ -11,6 +11,7 @@
 #include "configwidget.h"
 #include "extension.h"
 #include "KCMService.h"
+#include "moduleeditordialog.h"
 using namespace Core;
 using namespace std;
 
@@ -70,6 +71,62 @@ ExtraKdeSettings::Extension::~Extension() {
 QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
     if (d->widget.isNull()) {
         d->widget = new ConfigWidget(parent);
+
+        // Initialize the content and connect the signals
+
+        // Inserts columns
+        for(int i = 0; i < 4; i++) {
+            int column = d->widget->ui.tableWidget->columnCount();
+            d->widget->ui.tableWidget->insertColumn(column);
+        }
+
+        QStringList headers = {"Name", "Aliases", "Icon", "Description"};
+        d->widget->ui.tableWidget->setHorizontalHeaderLabels(headers);
+
+        auto iter = d->kcmServices.begin();
+        while(iter != d->kcmServices.end()) {
+            
+            int row = d->widget->ui.tableWidget->rowCount();
+            d->widget->ui.tableWidget->insertRow(row);
+
+            QTableWidgetItem *nameItem = new QTableWidgetItem((*iter)->name);
+            nameItem->setCheckState(Qt::Checked);
+            nameItem->setFlags(nameItem->flags() & (~Qt::ItemIsEditable));
+            d->widget->ui.tableWidget->setItem(row, 0, nameItem);
+
+            QString aliases = "";
+            for(QString alias : (*iter)->aliases) {
+                if(aliases != "") {
+                    aliases += ", ";
+                }
+                aliases += alias;
+            }
+
+            QTableWidgetItem *aliasItem = new QTableWidgetItem(aliases);
+            aliasItem->setFlags(aliasItem->flags() & (~Qt::ItemIsEditable));
+            d->widget->ui.tableWidget->setItem(row, 1, aliasItem);
+
+            QTableWidgetItem *iconItem = new QTableWidgetItem((*iter)->iconName);
+            iconItem->setFlags(iconItem->flags() & (~Qt::ItemIsEditable));
+            d->widget->ui.tableWidget->setItem(row, 2, iconItem);
+
+            QTableWidgetItem *commentItem = new QTableWidgetItem((*iter)->comment);
+            commentItem->setFlags(commentItem->flags() & (~Qt::ItemIsEditable));
+            d->widget->ui.tableWidget->setItem(row, 3, commentItem);
+
+            iter++;
+        }
+
+        connect(d->widget->ui.pushButton, &QPushButton::clicked, this, [this]() {
+            qDebug() << "clicked";
+            QList<QTableWidgetItem *> selected = d->widget->ui.tableWidget->selectedItems();
+            if(selected.size() > 0) {
+                QTableWidgetItem *selectedItem = selected.at(0);
+                QSet<QString> temp;
+                ModuleEditorDialog moduleEditorDialog("testname", "testicon", temp);
+                moduleEditorDialog.exec();
+            }
+        });
     }
     return d->widget;
 }
