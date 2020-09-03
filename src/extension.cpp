@@ -22,10 +22,17 @@ class ExtraKdeSettings::Private {
         vector<QString> iconPaths;
         vector<QString> commands;
 
-        vector<unique_ptr<KCMService>> kcmServices;
+        QMap<QString, KCMService*> kcmServicesMap;
+        vector<KCMService*> widgetList;
 
         ~Private() {
-            kcmServices.clear();
+            auto iter = kcmServicesMap.keyBegin();
+            while(iter != kcmServicesMap.keyEnd()) {
+                delete kcmServicesMap.value(*iter);
+                iter++;
+            }
+            kcmServicesMap.clear();
+            widgetList.clear();
         }
         
 };
@@ -52,8 +59,8 @@ ExtraKdeSettings::Extension::Extension()
                 iconName = service->icon();
             }
 
-            d->kcmServices.push_back(std::make_unique<KCMService>(service->desktopEntryName(), service->storageId(), service->exec(), 
-                    service->name(), service->genericName(), service->comment(), iconName));
+            d->kcmServicesMap.insert(service->name(), new KCMService(service->desktopEntryName(), service->storageId(), 
+                    service->exec(), service->name(), service->genericName(), service->comment(), iconName));
         }
     }
 }
@@ -83,19 +90,22 @@ QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
         QStringList headers = {"Name", "Aliases", "Icon", "Description"};
         d->widget->ui.tableWidget->setHorizontalHeaderLabels(headers);
 
-        auto iter = d->kcmServices.begin();
-        while(iter != d->kcmServices.end()) {
+        auto iter = d->kcmServicesMap.keyBegin();
+        while(iter != d->kcmServicesMap.keyEnd()) {
             
             int row = d->widget->ui.tableWidget->rowCount();
             d->widget->ui.tableWidget->insertRow(row);
 
-            QTableWidgetItem *nameItem = new QTableWidgetItem((*iter)->name);
+            auto servicePtr = d->kcmServicesMap.value(*iter);
+            d->widgetList.push_back(servicePtr);
+
+            QTableWidgetItem *nameItem = new QTableWidgetItem(*iter);
             nameItem->setCheckState(Qt::Checked);
             nameItem->setFlags(nameItem->flags() & (~Qt::ItemIsEditable));
             d->widget->ui.tableWidget->setItem(row, 0, nameItem);
 
             QString aliases = "";
-            for(QString alias : (*iter)->aliases) {
+            for(QString alias : servicePtr->aliases) {
                 if(aliases != "") {
                     aliases += ", ";
                 }
@@ -106,11 +116,11 @@ QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
             aliasItem->setFlags(aliasItem->flags() & (~Qt::ItemIsEditable));
             d->widget->ui.tableWidget->setItem(row, 1, aliasItem);
 
-            QTableWidgetItem *iconItem = new QTableWidgetItem((*iter)->iconName);
+            QTableWidgetItem *iconItem = new QTableWidgetItem(servicePtr->iconName);
             iconItem->setFlags(iconItem->flags() & (~Qt::ItemIsEditable));
             d->widget->ui.tableWidget->setItem(row, 2, iconItem);
 
-            QTableWidgetItem *commentItem = new QTableWidgetItem((*iter)->comment);
+            QTableWidgetItem *commentItem = new QTableWidgetItem(servicePtr->comment);
             commentItem->setFlags(commentItem->flags() & (~Qt::ItemIsEditable));
             d->widget->ui.tableWidget->setItem(row, 3, commentItem);
 
@@ -118,14 +128,21 @@ QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
         }
 
         connect(d->widget->ui.pushButton, &QPushButton::clicked, this, [this]() {
-            qDebug() << "clicked";
-            QList<QTableWidgetItem *> selected = d->widget->ui.tableWidget->selectedItems();
-            if(selected.size() > 0) {
-                QTableWidgetItem *selectedItem = selected.at(0);
-                QSet<QString> temp;
-                ModuleEditorDialog moduleEditorDialog("testname", "testicon", temp);
+            int selectedRow = d->widget->ui.tableWidget->currentRow();
+            qDebug() << "Row " << selectedRow << " clicked";
+
+            if(selectedRow != -1) {
+                KCMService* selectedService = d->widgetList.at(selectedRow);
+                ModuleEditorDialog moduleEditorDialog(selectedService->name, selectedService->iconName, selectedService->aliases);
                 moduleEditorDialog.exec();
             }
+        });
+
+        // Highlights entire row upon selection
+        connect(d->widget->ui.tableWidget, &QTableWidget::cellClicked, this, 
+                [this](int row) {
+            QTableWidgetSelectionRange selectionRange(row, 0, row, 3);
+            d->widget->ui.tableWidget->setRangeSelected(selectionRange, true);
         });
     }
     return d->widget;
@@ -140,11 +157,12 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
         return;
 
     // Checks for matches
-    auto iter = d->kcmServices.begin();
-    while(iter != d->kcmServices.end()) {
+    auto iter = d->kcmServicesMap.keyBegin();
+    while(iter != d->kcmServicesMap.keyEnd()) {
 
-        QString currentServiceName = (*iter)->name;
-        QString currentServiceComment = (*iter)->comment;
+        QString currentServiceName = *iter;
+        KCMService *servicePtr = d->kcmServicesMap.value(currentServiceName);
+        QString currentServiceComment = servicePtr->comment;;
         
         // Service name is closer to query
         if(currentServiceName.contains(query->string(), Qt::CaseInsensitive)) {
@@ -152,31 +170,30 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
             auto item = make_shared<StandardItem>(currentServiceName);
             item->setText(currentServiceName);
 
-            if (!(*iter)->genericName.isEmpty() && (*iter)->genericName != currentServiceName) {
-                item->setSubtext((*iter)->genericName);
+            if (!servicePtr->genericName.isEmpty() && servicePtr->genericName != currentServiceName) {
+                item->setSubtext(servicePtr->genericName);
             } else if (!currentServiceComment.isEmpty()) {
                 item->setSubtext(currentServiceComment);
             }
 
-            item->setIconPath(XDG::IconLookup::iconPath((*iter)->iconName));
-            item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split((*iter)->exec))));
+            item->setIconPath(XDG::IconLookup::iconPath(servicePtr->iconName));
+            item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
             query->addMatch(std::move(item), static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX));
         
         // Service comment is closer to query
         } else if(currentServiceComment.contains(query->string(), Qt::CaseInsensitive)) {
-            qDebug() << currentServiceComment << "matches";
 
             auto item = make_shared<StandardItem>(currentServiceComment);
             item->setText(currentServiceComment);
 
-            if (!(*iter)->genericName.isEmpty() && (*iter)->genericName != currentServiceComment) {
-                item->setSubtext((*iter)->genericName);
+            if (!servicePtr->genericName.isEmpty() && servicePtr->genericName != currentServiceComment) {
+                item->setSubtext(servicePtr->genericName);
             } else if (!currentServiceComment.isEmpty()) {
                 item->setSubtext(currentServiceName);
             }
 
-            item->setIconPath(XDG::IconLookup::iconPath((*iter)->iconName));
-            item->addAction(make_shared<ProcAction>(currentServiceComment, QStringList(Core::ShUtil::split((*iter)->exec))));
+            item->setIconPath(XDG::IconLookup::iconPath(servicePtr->iconName));
+            item->addAction(make_shared<ProcAction>(currentServiceComment, QStringList(Core::ShUtil::split(servicePtr->exec))));
             query->addMatch(std::move(item), static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX));
         }
         iter++;
