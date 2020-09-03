@@ -23,7 +23,7 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
         int row = ui.tableWidget->rowCount();
         ui.tableWidget->insertRow(row);
 
-        auto servicePtr = kcmServicesMap.value(*iter);
+        KCMService* servicePtr = kcmServicesMap.value(*iter);
         serviceList.push_back(servicePtr);
 
         QTableWidgetItem *nameItem = new QTableWidgetItem(*iter);
@@ -31,13 +31,7 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
         nameItem->setFlags(nameItem->flags() & (~Qt::ItemIsEditable));
         ui.tableWidget->setItem(row, 0, nameItem);
 
-        QString aliases = "";
-        for(QString alias : servicePtr->aliases) {
-            if(aliases != "") {
-                aliases += ", ";
-            }
-            aliases += alias;
-        }
+        QString aliases = servicePtr->getAliasString();
 
         QTableWidgetItem *aliasItem = new QTableWidgetItem(aliases);
         aliasItem->setFlags(aliasItem->flags() & (~Qt::ItemIsEditable));
@@ -63,8 +57,13 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
 
 
 /** ***************************************************************************/
-ExtraKdeSettings::ConfigWidget::~ConfigWidget() {
-
+ExtraKdeSettings::ConfigWidget::~ConfigWidget() { 
+    for(int row = serviceList.size() - 1; row >= 0; row--) {
+        for(int col = 3; col >= 0; col--) {
+            QTableWidgetItem* currentItem = ui.tableWidget->takeItem(row, col);
+            delete currentItem;
+        }
+    }
 }
 
 
@@ -78,10 +77,16 @@ void ExtraKdeSettings::ConfigWidget::onEditModulePress() {
 
     if(selectedRow != -1) {
         KCMService* selectedService = serviceList.at(selectedRow);
-        ModuleEditorDialog moduleEditorDialog(selectedService->name, selectedService->iconName, selectedService->aliases);
+        ModuleEditorDialog moduleEditorDialog(selectedService);
         
         if(moduleEditorDialog.exec()) {
-                
+            // Update icon name
+            QTableWidgetItem* iconItem = ui.tableWidget->item(selectedRow, 2);
+            iconItem->setText(selectedService->iconName);
+
+            // Update aliases
+            QTableWidgetItem* aliasItem = ui.tableWidget->item(selectedRow, 1);
+            aliasItem->setText(selectedService->getAliasString());
         }
     }
 }

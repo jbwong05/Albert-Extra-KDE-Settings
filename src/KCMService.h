@@ -11,6 +11,17 @@ namespace ExtraKdeSettings {
                     name(name), genericName(genericName), comment(comment), iconName(iconName) {};
             ~KCMService() {};
 
+            QString getAliasString() {
+                QString aliasString = "";
+                for(QString alias : aliases) {
+                    if(aliasString != "") {
+                        aliasString += ", ";
+                    }
+                    aliasString += alias;
+                }
+                return aliasString;
+            }
+
             QString desktopEntryName;
             QString storageId;
             QString exec;

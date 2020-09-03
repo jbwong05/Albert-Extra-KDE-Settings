@@ -1,6 +1,7 @@
 #pragma once
 #include "ui_moduleeditordialog.h"
 #include <QDialog>
+#include "KCMService.h"
 
 namespace ExtraKdeSettings {
 
@@ -9,8 +10,7 @@ namespace ExtraKdeSettings {
 
         public:
 
-            ModuleEditorDialog(QString name, QString iconName, QSet<QString> &aliases, 
-                    QWidget *parent = nullptr);
+            ModuleEditorDialog(KCMService* currentService, QWidget *parent = nullptr);
             ~ModuleEditorDialog();
             Ui::ModuleEditorDialog ui;
 
@@ -19,8 +19,9 @@ namespace ExtraKdeSettings {
             void accept() override;
         
         private:
-            QString name;
-            QString iconName;
-            QSet<QString> aliases;
+            KCMService* currentService;
+
+            void onAddButtonPress();
+            void onRemoveButtonPress();
     };
 }

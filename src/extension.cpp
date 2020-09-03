@@ -94,7 +94,7 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
     while(iter != d->kcmServicesMap.keyEnd()) {
 
         QString currentServiceName = *iter;
-        KCMService *servicePtr = d->kcmServicesMap.value(currentServiceName);
+        KCMService* servicePtr = d->kcmServicesMap.value(currentServiceName);
         QString currentServiceComment = servicePtr->comment;;
         
         // Service name is closer to query
