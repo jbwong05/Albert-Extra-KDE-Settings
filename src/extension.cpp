@@ -11,7 +11,6 @@
 #include "configwidget.h"
 #include "extension.h"
 #include "KCMService.h"
-#include "moduleeditordialog.h"
 using namespace Core;
 using namespace std;
 
@@ -77,73 +76,7 @@ ExtraKdeSettings::Extension::~Extension() {
 /** ***************************************************************************/
 QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
     if (d->widget.isNull()) {
-        d->widget = new ConfigWidget(parent);
-
-        // Initialize the content and connect the signals
-
-        // Inserts columns
-        for(int i = 0; i < 4; i++) {
-            int column = d->widget->ui.tableWidget->columnCount();
-            d->widget->ui.tableWidget->insertColumn(column);
-        }
-
-        QStringList headers = {"Name", "Aliases", "Icon", "Description"};
-        d->widget->ui.tableWidget->setHorizontalHeaderLabels(headers);
-
-        auto iter = d->kcmServicesMap.keyBegin();
-        while(iter != d->kcmServicesMap.keyEnd()) {
-            
-            int row = d->widget->ui.tableWidget->rowCount();
-            d->widget->ui.tableWidget->insertRow(row);
-
-            auto servicePtr = d->kcmServicesMap.value(*iter);
-            d->widgetList.push_back(servicePtr);
-
-            QTableWidgetItem *nameItem = new QTableWidgetItem(*iter);
-            nameItem->setCheckState(Qt::Checked);
-            nameItem->setFlags(nameItem->flags() & (~Qt::ItemIsEditable));
-            d->widget->ui.tableWidget->setItem(row, 0, nameItem);
-
-            QString aliases = "";
-            for(QString alias : servicePtr->aliases) {
-                if(aliases != "") {
-                    aliases += ", ";
-                }
-                aliases += alias;
-            }
-
-            QTableWidgetItem *aliasItem = new QTableWidgetItem(aliases);
-            aliasItem->setFlags(aliasItem->flags() & (~Qt::ItemIsEditable));
-            d->widget->ui.tableWidget->setItem(row, 1, aliasItem);
-
-            QTableWidgetItem *iconItem = new QTableWidgetItem(servicePtr->iconName);
-            iconItem->setFlags(iconItem->flags() & (~Qt::ItemIsEditable));
-            d->widget->ui.tableWidget->setItem(row, 2, iconItem);
-
-            QTableWidgetItem *commentItem = new QTableWidgetItem(servicePtr->comment);
-            commentItem->setFlags(commentItem->flags() & (~Qt::ItemIsEditable));
-            d->widget->ui.tableWidget->setItem(row, 3, commentItem);
-
-            iter++;
-        }
-
-        connect(d->widget->ui.pushButton, &QPushButton::clicked, this, [this]() {
-            int selectedRow = d->widget->ui.tableWidget->currentRow();
-            qDebug() << "Row " << selectedRow << " clicked";
-
-            if(selectedRow != -1) {
-                KCMService* selectedService = d->widgetList.at(selectedRow);
-                ModuleEditorDialog moduleEditorDialog(selectedService->name, selectedService->iconName, selectedService->aliases);
-                moduleEditorDialog.exec();
-            }
-        });
-
-        // Highlights entire row upon selection
-        connect(d->widget->ui.tableWidget, &QTableWidget::cellClicked, this, 
-                [this](int row) {
-            QTableWidgetSelectionRange selectionRange(row, 0, row, 3);
-            d->widget->ui.tableWidget->setRangeSelected(selectionRange, true);
-        });
+        d->widget = new ConfigWidget(d->kcmServicesMap, parent);
     }
     return d->widget;
 }

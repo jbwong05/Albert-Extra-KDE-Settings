@@ -12,7 +12,7 @@
   </property>
   <layout class="QVBoxLayout">
    <item>
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="description">
      <property name="text">
       <string>&lt;html&gt;
 &lt;head/&gt;
@@ -46,7 +46,7 @@
     </widget>
    </item>
    <item alignment="Qt::AlignRight">
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="editModuleButton">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
        <horstretch>0</horstretch>
