@@ -1,5 +1,6 @@
 #include "configwidget.h"
 #include "moduleeditordialog.h"
+#include <QTableWidgetItem>
 
 /** ***************************************************************************/
 ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmServicesMap, QWidget *parent) 
