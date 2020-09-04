@@ -5,10 +5,10 @@ namespace ExtraKdeSettings {
     
     class KCMService {
         public:
-            KCMService(QString storageId, QString exec, QString name, QString comment, 
-                    QString iconName, QStringList aliases) : 
-                    storageId(storageId), exec(exec), name(name), comment(comment), 
-                    iconName(iconName), aliases(aliases) {};
+            KCMService(bool isActivated, QString storageId, QString exec, QString name, 
+                    QString comment, QString iconName, QStringList aliases) : 
+                    isActivated(isActivated), storageId(storageId), exec(exec), name(name), 
+                    comment(comment), iconName(iconName), aliases(aliases) {};
             ~KCMService() {};
 
             QString getAliasString() {
@@ -22,6 +22,7 @@ namespace ExtraKdeSettings {
                 return aliasString;
             }
 
+            bool isActivated;
             QString storageId;
             QString exec;
             QString name;

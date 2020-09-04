@@ -1,6 +1,7 @@
 #include "configwidget.h"
 #include "moduleeditordialog.h"
 #include <QTableWidgetItem>
+#include <QDebug>
 
 #define NUM_COLS 4
 #define NAME_COL_INDEX 0
@@ -34,7 +35,8 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
         serviceList.push_back(servicePtr);
 
         QTableWidgetItem *nameItem = new QTableWidgetItem(*iter);
-        nameItem->setCheckState(Qt::Checked);
+        Qt::CheckState checkState = servicePtr->isActivated ? Qt::Checked : Qt::Unchecked;
+        nameItem->setCheckState(checkState);
         nameItem->setFlags(nameItem->flags() & (~Qt::ItemIsEditable));
         ui.tableWidget->setItem(row, NAME_COL_INDEX, nameItem);
 
@@ -55,6 +57,8 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
         iter++;
     }
 
+    cellChangeConnection = connect(ui.tableWidget, &QTableWidget::cellChanged, this, &ConfigWidget::toggleServiceActivation);
+
     connect(ui.editModuleButton, &QPushButton::clicked, this, &ConfigWidget::onEditModulePress);
 
     // Highlights entire row upon selection
@@ -64,7 +68,10 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
 
 
 /** ***************************************************************************/
-ExtraKdeSettings::ConfigWidget::~ConfigWidget() { 
+ExtraKdeSettings::ConfigWidget::~ConfigWidget() {
+    // Disconnect cell change connection first to avoid triggers
+    disconnect(cellChangeConnection);
+
     for(int row = serviceList.size() - 1; row >= 0; row--) {
         for(int col = NUM_COLS - 1; col >= 0; col--) {
             QTableWidgetItem* currentItem = ui.tableWidget->takeItem(row, col);
@@ -77,6 +84,17 @@ ExtraKdeSettings::ConfigWidget::~ConfigWidget() {
 void ExtraKdeSettings::ConfigWidget::selectRow(int row) {
     QTableWidgetSelectionRange selectionRange(row, 0, row, NUM_COLS - 1);
     ui.tableWidget->setRangeSelected(selectionRange, true);
+}
+
+void ExtraKdeSettings::ConfigWidget::toggleServiceActivation(int row, int column) {
+    if(column == 0) {
+        qDebug() << row << " " << column << " toggled";
+        KCMService* selectedService = serviceList.at(row);
+        QTableWidgetItem* nameItem = ui.tableWidget->item(row, NAME_COL_INDEX);
+        selectedService->isActivated = nameItem->checkState() == Qt::Checked;
+
+        emit activationUpdated(selectedService->storageId, selectedService->isActivated);
+    }
 }
 
 void ExtraKdeSettings::ConfigWidget::onEditModulePress() {

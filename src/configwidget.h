@@ -13,6 +13,7 @@ namespace ExtraKdeSettings {
             Ui::ConfigWidget ui;
 
         signals:
+            void activationUpdated(QString &storageId, bool activated);
             void displayNameUpdated(QString &storageId, QString &displayName);
             void iconNameUpdated(QString &storageId, QString &iconName);
             void commentUpdated(QString &storageId, QString &comment);
@@ -22,6 +23,9 @@ namespace ExtraKdeSettings {
             std::vector<KCMService*> serviceList;
 
             void selectRow(int row);
+            void toggleServiceActivation(int row, int column);
             void onEditModulePress();
+
+            QMetaObject::Connection cellChangeConnection;
     };
 }

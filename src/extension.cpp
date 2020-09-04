@@ -14,6 +14,7 @@
 using namespace Core;
 using namespace std;
 
+#define ACTIVATED_SETTINGS ALBERT_EXTENSION_IID"-activated"
 #define NAME_SETTINGS ALBERT_EXTENSION_IID"-names"
 #define ICON_SETTINGS ALBERT_EXTENSION_IID"-icon_names"
 #define COMMENT_SETTINGS ALBERT_EXTENSION_IID"-comments"
@@ -28,6 +29,7 @@ class ExtraKdeSettings::Private {
         QMap<QString, KCMService*> kcmServicesMap;
         vector<KCMService*> widgetList;
 
+        QMap<QString, QVariant> activatedSettings;
         QMap<QString, QVariant> nameSettings;
         QMap<QString, QVariant> iconSettings;
         QMap<QString, QVariant> commentSettings;
@@ -55,6 +57,7 @@ ExtraKdeSettings::Extension::Extension()
     registerQueryHandler(this);
 
     // Lookup settings
+    d->activatedSettings = settings().value(ACTIVATED_SETTINGS).toMap();
     d->nameSettings = settings().value(NAME_SETTINGS).toMap();
     d->iconSettings = settings().value(ICON_SETTINGS).toMap();
     d->commentSettings = settings().value(COMMENT_SETTINGS).toMap();
@@ -70,6 +73,7 @@ ExtraKdeSettings::Extension::Extension()
         } else {
             QString serviceStorgaeId = service->storageId();
 
+            bool isActivated = d->activatedSettings.contains(serviceStorgaeId) ? d->activatedSettings.value(serviceStorgaeId).toBool() : true;
             QString serviceName = d->nameSettings.contains(serviceStorgaeId) ? d->nameSettings.value(serviceStorgaeId).toString() : service->name();
             
             QString serviceIcon;
@@ -91,7 +95,7 @@ ExtraKdeSettings::Extension::Extension()
                 serviceAliases = d->aliasSettings.value(serviceStorgaeId).toStringList();
             }
 
-            d->kcmServicesMap.insert(serviceName, new KCMService(serviceStorgaeId, service->exec(), 
+            d->kcmServicesMap.insert(serviceName, new KCMService(isActivated, serviceStorgaeId, service->exec(), 
                     serviceName, serviceComment, serviceIcon, serviceAliases));
         }
     }
@@ -101,7 +105,10 @@ ExtraKdeSettings::Extension::Extension()
 
 /** ***************************************************************************/
 ExtraKdeSettings::Extension::~Extension() {
+    settings().setValue(ACTIVATED_SETTINGS, d->activatedSettings);
+    settings().setValue(NAME_SETTINGS, d->nameSettings);
     settings().setValue(ICON_SETTINGS, d->iconSettings);
+    settings().setValue(COMMENT_SETTINGS, d->commentSettings);
     settings().setValue(ALIAS_SETTINGS, d->aliasSettings);
 }
 
@@ -111,6 +118,11 @@ ExtraKdeSettings::Extension::~Extension() {
 QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
     if (d->widget.isNull()) {
         d->widget = new ConfigWidget(d->kcmServicesMap, parent);
+
+        connect(d->widget, &ConfigWidget::activationUpdated, this, [this](QString &storageId,
+                bool activated) {
+            d->activatedSettings.insert(storageId, activated);
+        });
 
         connect(d->widget, &ConfigWidget::displayNameUpdated, this, [this](QString &storageId,
                 QString &displayName) {
@@ -151,55 +163,57 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
 
         QString currentServiceName = *iter;
         KCMService* servicePtr = d->kcmServicesMap.value(currentServiceName);
-        QString currentServiceComment = servicePtr->comment;
+        if(servicePtr->isActivated) {
+            QString currentServiceComment = servicePtr->comment;
 
-        bool matchFound = false;
-        int score = 0;
-        
-        // Check service name
-        if(currentServiceName.contains(query->string(), Qt::CaseInsensitive)) {
-            score = static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX);
-            matchFound = true;
+            bool matchFound = false;
+            int score = 0;
 
-        } else {
+            // Check service name
+            if(currentServiceName.contains(query->string(), Qt::CaseInsensitive)) {
+                score = static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX);
+                matchFound = true;
 
-            // Check aliases
-            auto iter = servicePtr->aliases.begin();
-            while(!matchFound && iter != servicePtr->aliases.end()) {
-                if((*iter).contains(query->string())) {
-                    score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
-                    matchFound = true;
-                }
-                iter++;
-            }
+            } else {
 
-            if(!matchFound) {
-                // Check service comment
-                QStringList wordsInComment = QStringList(Core::ShUtil::split(servicePtr->comment));
-                auto iter = wordsInComment.begin();
-                while(!matchFound && iter != wordsInComment.end()) {
-                    if((*iter).contains(query->string()), Qt::CaseInsensitive) {
+                // Check aliases
+                auto iter = servicePtr->aliases.begin();
+                while(!matchFound && iter != servicePtr->aliases.end()) {
+                    if((*iter).contains(query->string())) {
                         score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
                         matchFound = true;
                     }
                     iter++;
                 }
+
+                if(!matchFound) {
+                    // Check service comment
+                    QStringList wordsInComment = QStringList(Core::ShUtil::split(servicePtr->comment));
+                    auto iter = wordsInComment.begin();
+                    while(!matchFound && iter != wordsInComment.end()) {
+                        if((*iter).contains(query->string()), Qt::CaseInsensitive) {
+                            score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
+                            matchFound = true;
+                        }
+                        iter++;
+                    }
+                }
             }
-        }
 
-        if(matchFound) {
-            auto item = make_shared<StandardItem>(currentServiceName);
-            item->setText(currentServiceName);
-            item->setSubtext(currentServiceComment);
+            if(matchFound) {
+                auto item = make_shared<StandardItem>(currentServiceName);
+                item->setText(currentServiceName);
+                item->setSubtext(currentServiceComment);
 
-            QString iconPath = XDG::IconLookup::iconPath(servicePtr->iconName);
-            if(iconPath == "") {
-                iconPath = XDG::IconLookup::iconPath(FALLBACK_ICON);
+                QString iconPath = XDG::IconLookup::iconPath(servicePtr->iconName);
+                if(iconPath == "") {
+                    iconPath = XDG::IconLookup::iconPath(FALLBACK_ICON);
+                }
+
+                item->setIconPath(iconPath);
+                item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
+                query->addMatch(std::move(item), score);
             }
-
-            item->setIconPath(iconPath);
-            item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
-            query->addMatch(std::move(item), score);
         }
 
         iter++;
