@@ -78,6 +78,9 @@ ExtraKdeSettings::Extension::Extension()
                 serviceIcon = FALLBACK_ICON;
             }
 
+            // Cache the icon path during initialization for faster searching later
+            XDG::IconLookup::iconPath(serviceIcon);
+
             QStringList serviceAliases;
             if(d->aliasSettings.contains(serviceStorgaeId)) {
                 serviceAliases = d->aliasSettings.value(serviceStorgaeId).toStringList();
@@ -107,6 +110,8 @@ QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
         connect(d->widget, &ConfigWidget::iconNameUpdated, this, [this](QString &storageId, 
                 QString &iconName) {
             d->iconSettings.insert(storageId, iconName);
+            // Cache new icon for faster searching later
+            XDG::IconLookup::iconPath(iconName);
         });
         connect(d->widget, &ConfigWidget::aliasesUpdated, this, [this](QString &storageId, 
                 QStringList &aliases) {
