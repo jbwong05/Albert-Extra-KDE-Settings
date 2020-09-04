@@ -13,7 +13,9 @@ namespace ExtraKdeSettings {
             Ui::ConfigWidget ui;
 
         signals:
+            void displayNameUpdated(QString &storageId, QString &displayName);
             void iconNameUpdated(QString &storageId, QString &iconName);
+            void commentUpdated(QString &storageId, QString &comment);
             void aliasesUpdated(QString &storageId, QStringList &aliases);
         
         private:

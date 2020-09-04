@@ -14,8 +14,10 @@ ExtraKdeSettings::ModuleEditorDialog::ModuleEditorDialog(KCMService* currentServ
         ui.aliasList->insertItem(row, item);
     }
 
-    ui.iconField->insert(currentService->iconName);
-    ui.nameDisplay->setText(currentService->name);
+    ui.moduleDisplayLabel->setText(currentService->storageId);
+    ui.displayNameField->setText(currentService->name);
+    ui.iconField->setText(currentService->iconName);
+    ui.commentBox->setText(currentService->comment);
 
     connect(ui.addButton, &QPushButton::clicked, this, &ModuleEditorDialog::onAddButtonPress);
     connect(ui.removeButton, &QPushButton::clicked, this, &ModuleEditorDialog::onRemoveButtonPress);
@@ -35,10 +37,14 @@ ExtraKdeSettings::ModuleEditorDialog::~ModuleEditorDialog() {
 
 /** ***************************************************************************/
 void ExtraKdeSettings::ModuleEditorDialog::accept() {
-    if (ui.iconField->text().trimmed().isEmpty()) {
+    if(ui.displayNameField->text().trimmed().isEmpty()) {
+        QMessageBox::information(this, tr("Empty Display Name Field"), tr("The display name field must not be empty."));
+    } else if (ui.iconField->text().trimmed().isEmpty()) {
         QMessageBox::information(this, tr("Empty Icon Field"), tr("The icon field must not be empty."));
     } else {
+        currentService->name = ui.displayNameField->text();
         currentService->iconName = ui.iconField->text();
+        currentService->comment = ui.commentBox->toPlainText();
         QDialog::accept();
     }
 }
