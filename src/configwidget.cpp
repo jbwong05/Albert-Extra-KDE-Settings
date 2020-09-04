@@ -88,6 +88,9 @@ void ExtraKdeSettings::ConfigWidget::onEditModulePress() {
             // Update aliases
             QTableWidgetItem* aliasItem = ui.tableWidget->item(selectedRow, 1);
             aliasItem->setText(selectedService->getAliasString());
+
+            emit iconNameUpdated(selectedService->storageId, selectedService->iconName);
+            emit aliasesUpdated(selectedService->storageId, selectedService->aliases);
         }
     }
 }

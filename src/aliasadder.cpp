@@ -2,7 +2,7 @@
 #include<QMessageBox>
 
 /** ***************************************************************************/
-ExtraKdeSettings::AliasAdder::AliasAdder(QString *enteredAlias, QSet<QString> *existingAliases, QWidget *parent) : 
+ExtraKdeSettings::AliasAdder::AliasAdder(QString *enteredAlias, QStringList *existingAliases, QWidget *parent) : 
     QDialog(parent), enteredAlias(enteredAlias), existingAliases(existingAliases) {
     ui.setupUi(this);
 }
@@ -23,7 +23,7 @@ void ExtraKdeSettings::AliasAdder::accept()
         QMessageBox::information(this, tr("Alias already exists"), tr("The entered alias already exists"));
     } else {
         *enteredAlias = ui.lineEdit->text();
-        existingAliases->insert(ui.lineEdit->text());
+        existingAliases->append(ui.lineEdit->text());
         QDialog::accept();
     }
 }

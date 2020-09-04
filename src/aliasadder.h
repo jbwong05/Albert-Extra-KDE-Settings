@@ -3,7 +3,6 @@
 #pragma once
 #include "ui_aliasadder.h"
 #include <QString>
-#include <QSet>
 
 namespace ExtraKdeSettings {
 
@@ -12,7 +11,7 @@ namespace ExtraKdeSettings {
 
         public:
 
-            AliasAdder(QString *enteredAlias, QSet<QString> *existingAliases, QWidget *parent = nullptr);
+            AliasAdder(QString *enteredAlias, QStringList *existingAliases, QWidget *parent = nullptr);
             ~AliasAdder();
             Ui::AliasAdder ui;
 
@@ -22,6 +21,6 @@ namespace ExtraKdeSettings {
         
         private:
             QString *enteredAlias;
-            QSet<QString> *existingAliases;
+            QStringList *existingAliases;
     };
 }

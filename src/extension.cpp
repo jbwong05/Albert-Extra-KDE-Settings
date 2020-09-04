@@ -14,15 +14,20 @@
 using namespace Core;
 using namespace std;
 
+#define NAME_SETTINGS ALBERT_EXTENSION_IID"-names"
+#define ICON_SETTINGS ALBERT_EXTENSION_IID"-icon_names"
+#define ALIAS_SETTINGS ALBERT_EXTENSION_IID"-aliases"
 
 class ExtraKdeSettings::Private {
     public:
         QPointer<ConfigWidget> widget;
-        vector<QString> iconPaths;
-        vector<QString> commands;
 
         QMap<QString, KCMService*> kcmServicesMap;
         vector<KCMService*> widgetList;
+
+        QMap<QString, QVariant> nameSettings;
+        QMap<QString, QVariant> iconSettings;
+        QMap<QString, QVariant> aliasSettings;
 
         ~Private() {
             auto iter = kcmServicesMap.keyBegin();
@@ -45,6 +50,11 @@ ExtraKdeSettings::Extension::Extension()
 
     registerQueryHandler(this);
 
+    // Lookup settings
+    d->nameSettings = settings().value(NAME_SETTINGS).toMap();
+    d->iconSettings = settings().value(ICON_SETTINGS).toMap();
+    d->aliasSettings = settings().value(ALIAS_SETTINGS).toMap();
+    
     // Lookup kcm modules
     QString queryStr = generateQuery("");
 
@@ -53,13 +63,26 @@ ExtraKdeSettings::Extension::Extension()
         if(service->noDisplay()) {
             continue;
         } else {
-            QString iconName = "system-settings";
-            if(!service->icon().isEmpty()) {
-                iconName = service->icon();
+            QString serviceStorgaeId = service->storageId();
+
+            QString serviceName = d->nameSettings.contains(serviceStorgaeId) ? d->nameSettings.value(serviceStorgaeId).toString() : service->name();
+            
+            QString serviceIcon;
+            if(d->iconSettings.contains(serviceStorgaeId)) {
+                serviceIcon = d->iconSettings.value(serviceStorgaeId).toString();
+            } else if(!service->icon().isEmpty()) {
+                serviceIcon = service->icon();
+            } else {
+                serviceIcon = "system-settings";
             }
 
-            d->kcmServicesMap.insert(service->name(), new KCMService(service->desktopEntryName(), service->storageId(), 
-                    service->exec(), service->name(), service->genericName(), service->comment(), iconName));
+            QStringList serviceAliases;
+            if(d->aliasSettings.contains(serviceStorgaeId)) {
+                serviceAliases = d->aliasSettings.value(serviceStorgaeId).toStringList();
+            }
+
+            d->kcmServicesMap.insert(serviceName, new KCMService(service->desktopEntryName(), serviceStorgaeId, 
+                    service->exec(), serviceName, service->genericName(), service->comment(), serviceIcon, serviceAliases));
         }
     }
 }
@@ -68,7 +91,8 @@ ExtraKdeSettings::Extension::Extension()
 
 /** ***************************************************************************/
 ExtraKdeSettings::Extension::~Extension() {
-
+    settings().setValue(ICON_SETTINGS, d->iconSettings);
+    settings().setValue(ALIAS_SETTINGS, d->aliasSettings);
 }
 
 
@@ -77,6 +101,15 @@ ExtraKdeSettings::Extension::~Extension() {
 QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
     if (d->widget.isNull()) {
         d->widget = new ConfigWidget(d->kcmServicesMap, parent);
+
+        connect(d->widget, &ConfigWidget::iconNameUpdated, this, [this](QString &storageId, 
+                QString &iconName) {
+            d->iconSettings.insert(storageId, iconName);
+        });
+        connect(d->widget, &ConfigWidget::aliasesUpdated, this, [this](QString &storageId, 
+                QStringList &aliases) {
+            d->aliasSettings.insert(storageId, aliases);
+        });
     }
     return d->widget;
 }
@@ -152,6 +185,5 @@ QString ExtraKdeSettings::Extension::generateQuery(const QString &str) const {
     QString finalQuery = QStringLiteral("exist Exec and ( (%1) or (%2) or ('%3' ~~ Exec) or (%4) )")
         .arg(genericNameTemplate, nameTemplate, str, commentTemplate);
 
-    qDebug() << "Final query : " << finalQuery;
     return finalQuery;
 }

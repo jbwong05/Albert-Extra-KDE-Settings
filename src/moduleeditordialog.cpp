@@ -57,7 +57,7 @@ void ExtraKdeSettings::ModuleEditorDialog::onRemoveButtonPress() {
 
     if(selectedRow != -1) {
         QListWidgetItem* item = ui.aliasList->takeItem(selectedRow);
-        currentService->aliases.remove(item->text());
+        currentService->aliases.removeOne(item->text());
         delete item;
     }
 }
