@@ -23,7 +23,6 @@ void ExtraKdeSettings::AliasAdder::accept()
         QMessageBox::information(this, tr("Alias already exists"), tr("The entered alias already exists"));
     } else {
         *enteredAlias = ui.lineEdit->text();
-        existingAliases->append(ui.lineEdit->text());
         QDialog::accept();
     }
 }

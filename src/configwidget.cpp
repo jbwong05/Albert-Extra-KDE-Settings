@@ -1,7 +1,6 @@
 #include "configwidget.h"
 #include "moduleeditordialog.h"
 #include <QTableWidgetItem>
-#include <QDebug>
 
 #define NUM_COLS 4
 #define NAME_COL_INDEX 0
@@ -88,7 +87,6 @@ void ExtraKdeSettings::ConfigWidget::selectRow(int row) {
 
 void ExtraKdeSettings::ConfigWidget::toggleServiceActivation(int row, int column) {
     if(column == 0) {
-        qDebug() << row << " " << column << " toggled";
         KCMService* selectedService = serviceList.at(row);
         QTableWidgetItem* nameItem = ui.tableWidget->item(row, NAME_COL_INDEX);
         selectedService->isActivated = nameItem->checkState() == Qt::Checked;

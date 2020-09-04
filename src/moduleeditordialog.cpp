@@ -21,6 +21,10 @@ ExtraKdeSettings::ModuleEditorDialog::ModuleEditorDialog(KCMService* currentServ
 
     connect(ui.addButton, &QPushButton::clicked, this, &ModuleEditorDialog::onAddButtonPress);
     connect(ui.removeButton, &QPushButton::clicked, this, &ModuleEditorDialog::onRemoveButtonPress);
+    connect(ui.buttonBox, &QDialogButtonBox::accepted, this, &ModuleEditorDialog::accept);
+    connect(ui.buttonBox, &QDialogButtonBox::rejected, this, [this]() {
+        QDialog::reject();
+    });
 }
 
 
@@ -45,6 +49,17 @@ void ExtraKdeSettings::ModuleEditorDialog::accept() {
         currentService->name = ui.displayNameField->text();
         currentService->iconName = ui.iconField->text();
         currentService->comment = ui.commentBox->toPlainText();
+
+        currentService->aliases.clear();
+        
+        QListWidgetItem* currentItem = ui.aliasList->takeItem(0);
+        while(currentItem) {
+            currentService->aliases.append(currentItem->text());
+
+            delete currentItem;
+            currentItem = ui.aliasList->takeItem(0);
+        }
+
         QDialog::accept();
     }
 }
@@ -52,7 +67,6 @@ void ExtraKdeSettings::ModuleEditorDialog::accept() {
 void ExtraKdeSettings::ModuleEditorDialog::onAddButtonPress() {
     QString newAlias;
     AliasAdder aliasAdder(&newAlias, &(currentService->aliases));
-
     if(aliasAdder.exec()) {
         ui.aliasList->addItem(newAlias);
     }
