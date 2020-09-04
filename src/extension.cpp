@@ -18,6 +18,8 @@ using namespace std;
 #define ICON_SETTINGS ALBERT_EXTENSION_IID"-icon_names"
 #define ALIAS_SETTINGS ALBERT_EXTENSION_IID"-aliases"
 
+#define FALLBACK_ICON "preferences-system"
+
 class ExtraKdeSettings::Private {
     public:
         QPointer<ConfigWidget> widget;
@@ -73,7 +75,7 @@ ExtraKdeSettings::Extension::Extension()
             } else if(!service->icon().isEmpty()) {
                 serviceIcon = service->icon();
             } else {
-                serviceIcon = "system-settings";
+                serviceIcon = FALLBACK_ICON;
             }
 
             QStringList serviceAliases;
@@ -128,11 +130,43 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
 
         QString currentServiceName = *iter;
         KCMService* servicePtr = d->kcmServicesMap.value(currentServiceName);
-        QString currentServiceComment = servicePtr->comment;;
-        
-        // Service name is closer to query
-        if(currentServiceName.contains(query->string(), Qt::CaseInsensitive)) {
+        QString currentServiceComment = servicePtr->comment;
 
+        bool matchFound = false;
+        int score = 0;
+        
+        // Check service name
+        if(currentServiceName.contains(query->string(), Qt::CaseInsensitive)) {
+            score = static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX);
+            matchFound = true;
+
+        } else {
+
+            // Check aliases
+            auto iter = servicePtr->aliases.begin();
+            while(!matchFound && iter != servicePtr->aliases.end()) {
+                if((*iter).contains(query->string())) {
+                    score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
+                    matchFound = true;
+                }
+                iter++;
+            }
+
+            if(!matchFound) {
+                // Check service comment
+                QStringList wordsInComment = QStringList(Core::ShUtil::split(servicePtr->comment));
+                auto iter = wordsInComment.begin();
+                while(!matchFound && iter != wordsInComment.end()) {
+                    if((*iter).contains(query->string()), Qt::CaseInsensitive) {
+                        score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
+                        matchFound = true;
+                    }
+                    iter++;
+                }
+            }
+        }
+
+        if(matchFound) {
             auto item = make_shared<StandardItem>(currentServiceName);
             item->setText(currentServiceName);
 
@@ -142,26 +176,16 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
                 item->setSubtext(currentServiceComment);
             }
 
-            item->setIconPath(XDG::IconLookup::iconPath(servicePtr->iconName));
-            item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
-            query->addMatch(std::move(item), static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX));
-        
-        // Service comment is closer to query
-        } else if(currentServiceComment.contains(query->string(), Qt::CaseInsensitive)) {
-
-            auto item = make_shared<StandardItem>(currentServiceComment);
-            item->setText(currentServiceComment);
-
-            if (!servicePtr->genericName.isEmpty() && servicePtr->genericName != currentServiceComment) {
-                item->setSubtext(servicePtr->genericName);
-            } else if (!currentServiceComment.isEmpty()) {
-                item->setSubtext(currentServiceName);
+            QString iconPath = XDG::IconLookup::iconPath(servicePtr->iconName);
+            if(iconPath == "") {
+                iconPath = XDG::IconLookup::iconPath(FALLBACK_ICON);
             }
 
-            item->setIconPath(XDG::IconLookup::iconPath(servicePtr->iconName));
-            item->addAction(make_shared<ProcAction>(currentServiceComment, QStringList(Core::ShUtil::split(servicePtr->exec))));
-            query->addMatch(std::move(item), static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX));
+            item->setIconPath(iconPath);
+            item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
+            query->addMatch(std::move(item), score);
         }
+
         iter++;
     }
 }
