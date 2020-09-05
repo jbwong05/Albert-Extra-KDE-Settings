@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QStringBuilder>
 
 namespace ExtraKdeSettings {
     
@@ -13,11 +14,12 @@ namespace ExtraKdeSettings {
 
             QString getAliasString() {
                 QString aliasString = "";
+                QString separator = ", ";
                 for(QString alias : aliases) {
                     if(aliasString != "") {
-                        aliasString += ", ";
+                        aliasString = aliasString % separator;
                     }
-                    aliasString += alias;
+                    aliasString = aliasString % alias;
                 }
                 return aliasString;
             }

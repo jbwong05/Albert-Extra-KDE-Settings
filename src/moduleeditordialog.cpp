@@ -14,7 +14,7 @@ ExtraKdeSettings::ModuleEditorDialog::ModuleEditorDialog(KCMService* currentServ
         ui.aliasList->insertItem(row, item);
     }
 
-    ui.moduleDisplayLabel->setText(currentService->storageId);
+    ui.moduleDisplayLabel->setText(currentService->exec.split(' ')[1]);
     ui.displayNameField->setText(currentService->name);
     ui.iconField->setText(currentService->iconName);
     ui.commentBox->setText(currentService->comment);
