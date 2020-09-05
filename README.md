@@ -9,6 +9,8 @@ QPlugin for the [Albert Launcher](https://albertlauncher.github.io/) that expose
 This plugin also shares the same dependencies that are needed to build [Albert](https://albertlauncher.github.io/) from sources. Information about building [Albert](https://albertlauncher.github.io/) from sources and its dependencies can be found [here](https://albertlauncher.github.io/docs/installing/).
 
 ## Installation
+
+### Option 1: Compile alongside Albert
 ```
 git clone --recursive https://github.com/albertlauncher/albert.git
 cd albert/plugins
@@ -18,6 +20,16 @@ cd ..
 mkdir albert-build
 cd albert-build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+make
+sudo make install
+```
+
+### Option 2: Compile separately from Albert
+```
+git clone https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SEPARATELY=ON ..
 make
 sudo make install
 ```
