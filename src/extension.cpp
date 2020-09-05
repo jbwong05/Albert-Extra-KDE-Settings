@@ -117,7 +117,7 @@ ExtraKdeSettings::Extension::~Extension() {
 /** ***************************************************************************/
 QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
     if (d->widget.isNull()) {
-        d->widget = new ConfigWidget(d->kcmServicesMap, parent);
+        d->widget = new ConfigWidget(&(d->kcmServicesMap), parent);
 
         connect(d->widget, &ConfigWidget::activationUpdated, this, [this](QString &storageId,
                 bool activated) {

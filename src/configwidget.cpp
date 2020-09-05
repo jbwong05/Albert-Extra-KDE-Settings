@@ -9,8 +9,8 @@
 #define COMMENT_COL_INDEX 3
 
 /** ***************************************************************************/
-ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmServicesMap, QWidget *parent) 
-        : QWidget(parent) {
+ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> *kcmServicesMap, QWidget *parent) 
+        : QWidget(parent), kcmServicesMap(kcmServicesMap) {
 
     ui.setupUi(this);
     // Initialize the content and connect the signals
@@ -24,13 +24,13 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> & kcmSer
     QStringList headers = {"Display Name", "Aliases", "Icon", "Description"};
     ui.tableWidget->setHorizontalHeaderLabels(headers);
 
-    auto iter = kcmServicesMap.keyBegin();
-    while(iter != kcmServicesMap.keyEnd()) {
+    auto iter = kcmServicesMap->keyBegin();
+    while(iter != kcmServicesMap->keyEnd()) {
             
         int row = ui.tableWidget->rowCount();
         ui.tableWidget->insertRow(row);
 
-        KCMService* servicePtr = kcmServicesMap.value(*iter);
+        KCMService* servicePtr = kcmServicesMap->value(*iter);
         serviceList.push_back(servicePtr);
 
         QTableWidgetItem *nameItem = new QTableWidgetItem(*iter);
@@ -100,12 +100,18 @@ void ExtraKdeSettings::ConfigWidget::onEditModulePress() {
 
     if(selectedRow != -1) {
         KCMService* selectedService = serviceList.at(selectedRow);
+        QString previousDisplayName = selectedService->name;
         ModuleEditorDialog moduleEditorDialog(selectedService);
         
         if(moduleEditorDialog.exec()) {
             // Update display name
-            QTableWidgetItem* nameItem = ui.tableWidget->item(selectedRow, NAME_COL_INDEX);
-            nameItem->setText(selectedService->name);
+            if(previousDisplayName != selectedService->name) {
+                kcmServicesMap->remove(previousDisplayName);
+                kcmServicesMap->insert(selectedService->name, selectedService);
+                
+                QTableWidgetItem* nameItem = ui.tableWidget->item(selectedRow, NAME_COL_INDEX);
+                nameItem->setText(selectedService->name);
+            }
 
             // Update icon name
             QTableWidgetItem* iconItem = ui.tableWidget->item(selectedRow, ICON_COL_INDEX);
