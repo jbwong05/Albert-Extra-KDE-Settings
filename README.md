@@ -27,6 +27,7 @@ sudo make install
 ### Option 2: Compile separately from Albert
 ```
 git clone https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
+cd Albert-Extra-KDE-Settings
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SEPARATELY=ON ..
