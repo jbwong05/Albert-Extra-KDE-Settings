@@ -5,6 +5,6 @@
     "platform" :        "All",
     "group" :           "Extensions",
     "author" :          "Joshua Wong",
-    "dependencies" :    ["libkf5service-dev"],
+    "dependencies" :    ["KF5Service"],
     "enabledbydefault": false
 }
