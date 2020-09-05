@@ -17,7 +17,7 @@ This plugin shares the same dependencies that are needed to build [Albert](https
 ```
 git clone --recursive https://github.com/albertlauncher/albert.git
 cd albert/plugins
-git submodule add https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
+git clone --single-branch --branch hardcoded_1.0 https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
 ./Albert-Extra-KDE-Settings/updateCMakeLists.sh
 cd ..
 mkdir albert-build
@@ -25,4 +25,9 @@ cd albert-build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
 make
 sudo make install
+```
+
+## Uninstallation
+```
+sudo rm -f /usr/lib/albert/plugins/libextrakdesettings.so
 ```
