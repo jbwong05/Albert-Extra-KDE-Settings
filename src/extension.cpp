@@ -1,6 +1,8 @@
 #include <QDebug>
 #include <QPointer>
 #include <QRegularExpression>
+#include <QFutureWatcher>
+#include <QtConcurrent>
 #include <KService>
 #include <KServiceTypeTrader>
 #include "albert/util/standarditem.h"
@@ -8,6 +10,8 @@
 #include "albert/util/shutil.h"
 #include "albert/util/standardactions.h"
 #include "albert/util/standarditem.h"
+#include "albert/util/standardindexitem.h"
+#include "albert/util/offlineindex.h"
 #include "configwidget.h"
 #include "extension.h"
 #include "KCMService.h"
@@ -26,8 +30,11 @@ class ExtraKdeSettings::Private {
     public:
         QPointer<ConfigWidget> widget;
 
-        QMap<QString, KCMService*> kcmServicesMap;
-        vector<KCMService*> widgetList;
+        vector<shared_ptr<KCMService>> index;
+        OfflineIndex offlineIndex;
+        QFutureWatcher<vector<shared_ptr<KCMService>>> futureWatcher;
+
+        QMap<QString, shared_ptr<KCMService>> kcmServicesMap;
 
         QMap<QString, QVariant> activatedSettings;
         QMap<QString, QVariant> nameSettings;
@@ -36,17 +43,126 @@ class ExtraKdeSettings::Private {
         QMap<QString, QVariant> aliasSettings;
 
         ~Private() {
-            auto iter = kcmServicesMap.keyBegin();
+            /*auto iter = kcmServicesMap.keyBegin();
             while(iter != kcmServicesMap.keyEnd()) {
                 delete kcmServicesMap.value(*iter);
                 iter++;
-            }
+            }*/
             kcmServicesMap.clear();
-            widgetList.clear();
         }
+
+        void startLoadingSettingsModules();
+        void finishLoadingSettingsModules();
+        vector<shared_ptr<ExtraKdeSettings::KCMService>> loadSettingsModules() const;
+        QString generateQuery(const QString &strList) const;
         
 };
 
+void ExtraKdeSettings::Private::startLoadingSettingsModules() {
+    // Never run concurrent
+    if ( futureWatcher.future().isRunning() ) {
+        //rerun = true;
+        return;
+    }
+
+    // Run finishIndexing when the indexing thread finished
+    futureWatcher.disconnect();
+    QObject::connect(&futureWatcher, &QFutureWatcher<vector<shared_ptr<Core::StandardIndexItem>>>::finished,
+                     std::bind(&Private::finishLoadingSettingsModules, this));
+
+    // Run the indexer thread
+    futureWatcher.setFuture(QtConcurrent::run(this, &Private::loadSettingsModules));
+}
+
+void ExtraKdeSettings::Private::finishLoadingSettingsModules() {
+
+    // Get the thread results
+    index = futureWatcher.future().result();
+
+    // Rebuild the offline index
+    offlineIndex.clear();
+    for (const shared_ptr<ExtraKdeSettings::KCMService> &item : index) {
+        offlineIndex.add(item);
+        kcmServicesMap.insert(item->name, item);
+    }
+}
+
+vector<shared_ptr<ExtraKdeSettings::KCMService>> ExtraKdeSettings::Private::loadSettingsModules() const {
+    
+    vector<shared_ptr<KCMService>> settingsModules;
+    
+    // Lookup kcm modules
+    QString queryStr = generateQuery("");
+
+    KService::List services = KServiceTypeTrader::self()->query(QStringLiteral("KCModule"), queryStr);
+    for (const KService::Ptr &service : qAsConst(services)) {
+        if(service->noDisplay()) {
+            continue;
+        } else {
+            QString serviceStorageId = service->storageId();
+
+            bool isActivated = activatedSettings.contains(serviceStorageId) ? activatedSettings.value(serviceStorageId).toBool() : true;
+            QString serviceName = nameSettings.contains(serviceStorageId) ? nameSettings.value(serviceStorageId).toString() : service->name();
+            
+            QString serviceIcon;
+            if(iconSettings.contains(serviceStorageId)) {
+                serviceIcon = iconSettings.value(serviceStorageId).toString();
+            } else if(!service->icon().isEmpty()) {
+                serviceIcon = service->icon();
+            } else {
+                serviceIcon = FALLBACK_ICON;
+            }
+
+            QString serviceComment = commentSettings.contains(serviceStorageId) ? commentSettings.value(serviceStorageId).toString() : service->comment();
+
+            QStringList serviceAliases;
+            if(aliasSettings.contains(serviceStorageId)) {
+                serviceAliases = aliasSettings.value(serviceStorageId).toStringList();
+            }
+
+            vector<IndexableItem::IndexString> indexStrings;
+            indexStrings.emplace_back(serviceName, UINT_MAX);
+            for(QString alias : serviceAliases) {
+                indexStrings.emplace_back(alias, UINT_MAX);
+            }
+
+            //KCMService* currentService = new KCMService(isActivated, serviceStorgaeId, service->exec(), 
+            //        serviceName, serviceComment, serviceIcon, serviceAliases);
+            shared_ptr<KCMService> newService = std::make_shared<KCMService>(isActivated, serviceStorageId, service->exec(), 
+                    serviceName, serviceComment, serviceIcon, serviceAliases);
+            newService->setIconPath(XDG::IconLookup::iconPath(serviceIcon));
+            newService->setId(serviceStorageId);
+            newService->setText(serviceName);
+            newService->setCompletion(serviceName);
+            newService->setSubtext(serviceComment);
+            newService->setIndexKeywords(std::move(indexStrings));
+            newService->addAction(make_shared<ProcAction>(serviceName, QStringList(Core::ShUtil::split(service->exec()))));
+
+            settingsModules.push_back(std::move(newService));
+            //kcmServicesMap.insert(serviceName, newService);
+        }
+    }
+    return settingsModules;
+}
+
+QString ExtraKdeSettings::Private::generateQuery(const QString &str) const {
+    QString nameTemplate = QStringLiteral("exist Name");
+    QString commentTemplate = QStringLiteral("exist Comment");
+
+    // Search for applications which are executable and the term case-insensitive matches any of
+    // * a substring of one of the comments
+    // * a substring of the Name field
+    // Note that before asking for the content of e.g. Keywords and GenericName we need to ask if
+    // they exist to prevent a tree evaluation error if they are not defined.
+
+    nameTemplate += QStringLiteral(" and '%1' ~~ Name").arg(str);
+    commentTemplate += QStringLiteral(" and '%1' ~~ Comment").arg(str);
+
+    QString finalQuery = QStringLiteral("exist Exec and ( (%1) or ('%2' ~~ Exec) or (%3) )")
+        .arg(nameTemplate, str, commentTemplate);
+
+    return finalQuery;
+}
 
 /** ***************************************************************************/
 ExtraKdeSettings::Extension::Extension()
@@ -62,49 +178,20 @@ ExtraKdeSettings::Extension::Extension()
     d->iconSettings = settings().value(ICON_SETTINGS).toMap();
     d->commentSettings = settings().value(COMMENT_SETTINGS).toMap();
     d->aliasSettings = settings().value(ALIAS_SETTINGS).toMap();
-    
-    // Lookup kcm modules
-    QString queryStr = generateQuery("");
 
-    KService::List services = KServiceTypeTrader::self()->query(QStringLiteral("KCModule"), queryStr);
-    for (const KService::Ptr &service : qAsConst(services)) {
-        if(service->noDisplay()) {
-            continue;
-        } else {
-            QString serviceStorgaeId = service->storageId();
+    d->offlineIndex.setFuzzy(true);
+    loadSettingsModules();
+}
 
-            bool isActivated = d->activatedSettings.contains(serviceStorgaeId) ? d->activatedSettings.value(serviceStorgaeId).toBool() : true;
-            QString serviceName = d->nameSettings.contains(serviceStorgaeId) ? d->nameSettings.value(serviceStorgaeId).toString() : service->name();
-            
-            QString serviceIcon;
-            if(d->iconSettings.contains(serviceStorgaeId)) {
-                serviceIcon = d->iconSettings.value(serviceStorgaeId).toString();
-            } else if(!service->icon().isEmpty()) {
-                serviceIcon = service->icon();
-            } else {
-                serviceIcon = FALLBACK_ICON;
-            }
-
-            // Cache the icon path during initialization for faster searching later
-            XDG::IconLookup::iconPath(serviceIcon);
-
-            QString serviceComment = d->commentSettings.contains(serviceStorgaeId) ? d->commentSettings.value(serviceStorgaeId).toString() : service->comment();
-
-            QStringList serviceAliases;
-            if(d->aliasSettings.contains(serviceStorgaeId)) {
-                serviceAliases = d->aliasSettings.value(serviceStorgaeId).toStringList();
-            }
-
-            d->kcmServicesMap.insert(serviceName, new KCMService(isActivated, serviceStorgaeId, service->exec(), 
-                    serviceName, serviceComment, serviceIcon, serviceAliases));
-        }
-    }
+void ExtraKdeSettings::Extension::loadSettingsModules() {
+    d->startLoadingSettingsModules();
 }
 
 
 
 /** ***************************************************************************/
 ExtraKdeSettings::Extension::~Extension() {
+    d->futureWatcher.waitForFinished();
     settings().setValue(ACTIVATED_SETTINGS, d->activatedSettings);
     settings().setValue(NAME_SETTINGS, d->nameSettings);
     settings().setValue(ICON_SETTINGS, d->iconSettings);
@@ -154,87 +241,19 @@ QWidget *ExtraKdeSettings::Extension::widget(QWidget *parent) {
 /** ***************************************************************************/
 void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
 
-    if ( query->string().isEmpty())
+    if (query->string().isEmpty())
         return;
+    
+    const vector<shared_ptr<Core::IndexableItem>> &indexables = d->offlineIndex.search(query->string());
 
-    // Checks for matches
-    auto iter = d->kcmServicesMap.keyBegin();
-    while(iter != d->kcmServicesMap.keyEnd()) {
-
-        QString currentServiceName = *iter;
-        KCMService* servicePtr = d->kcmServicesMap.value(currentServiceName);
+    vector<pair<shared_ptr<Core::Item>,uint>> results;
+    for (const shared_ptr<Core::IndexableItem> &item : indexables) {
+        std::shared_ptr<KCMService> servicePtr = std::static_pointer_cast<KCMService>(item);
         if(servicePtr->isActivated) {
-            QString currentServiceComment = servicePtr->comment;
-
-            bool matchFound = false;
-            int score = 0;
-
-            // Check service name
-            if(currentServiceName.contains(query->string(), Qt::CaseInsensitive)) {
-                score = static_cast<uint>(static_cast<float>(query->string().size()) / currentServiceName.size() * UINT_MAX);
-                matchFound = true;
-
-            } else {
-
-                // Check aliases
-                auto iter = servicePtr->aliases.begin();
-                while(!matchFound && iter != servicePtr->aliases.end()) {
-                    if((*iter).contains(query->string())) {
-                        score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
-                        matchFound = true;
-                    }
-                    iter++;
-                }
-
-                if(!matchFound) {
-                    // Check service comment
-                    QStringList wordsInComment = QStringList(Core::ShUtil::split(servicePtr->comment));
-                    auto iter = wordsInComment.begin();
-                    while(!matchFound && iter != wordsInComment.end()) {
-                        if((*iter).contains(query->string()), Qt::CaseInsensitive) {
-                            score = static_cast<uint>(static_cast<float>(query->string().size()) / (*iter).size() * UINT_MAX);
-                            matchFound = true;
-                        }
-                        iter++;
-                    }
-                }
-            }
-
-            if(matchFound) {
-                auto item = make_shared<StandardItem>(currentServiceName);
-                item->setText(currentServiceName);
-                item->setSubtext(currentServiceComment);
-
-                QString iconPath = XDG::IconLookup::iconPath(servicePtr->iconName);
-                if(iconPath == "") {
-                    iconPath = XDG::IconLookup::iconPath(FALLBACK_ICON);
-                }
-
-                item->setIconPath(iconPath);
-                item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
-                query->addMatch(std::move(item), score);
-            }
+            results.emplace_back(servicePtr, 1);
         }
-
-        iter++;
     }
-}
 
-QString ExtraKdeSettings::Extension::generateQuery(const QString &str) const {
-    QString nameTemplate = QStringLiteral("exist Name");
-    QString commentTemplate = QStringLiteral("exist Comment");
-
-    // Search for applications which are executable and the term case-insensitive matches any of
-    // * a substring of one of the comments
-    // * a substring of the Name field
-    // Note that before asking for the content of e.g. Keywords and GenericName we need to ask if
-    // they exist to prevent a tree evaluation error if they are not defined.
-
-    nameTemplate += QStringLiteral(" and '%1' ~~ Name").arg(str);
-    commentTemplate += QStringLiteral(" and '%1' ~~ Comment").arg(str);
-
-    QString finalQuery = QStringLiteral("exist Exec and ( (%1) or ('%2' ~~ Exec) or (%3) )")
-        .arg(nameTemplate, str, commentTemplate);
-
-    return finalQuery;
+    query->addMatches(std::make_move_iterator(results.begin()),
+                      std::make_move_iterator(results.end()));
 }

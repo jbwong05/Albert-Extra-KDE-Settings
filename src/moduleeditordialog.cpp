@@ -3,7 +3,7 @@
 #include "aliasadder.h"
 
 /** ***************************************************************************/
-ExtraKdeSettings::ModuleEditorDialog::ModuleEditorDialog(KCMService* currentService, QWidget *parent) : 
+ExtraKdeSettings::ModuleEditorDialog::ModuleEditorDialog(std::shared_ptr<KCMService> currentService, QWidget *parent) : 
         QDialog(parent), currentService(currentService) {
 
     ui.setupUi(this);

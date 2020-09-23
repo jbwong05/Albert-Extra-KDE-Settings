@@ -33,7 +33,7 @@ namespace ExtraKdeSettings {
         private:
 
             std::unique_ptr<Private> d;
-            QString generateQuery(const QString &strList) const;
+            void loadSettingsModules();
 
     };
 }

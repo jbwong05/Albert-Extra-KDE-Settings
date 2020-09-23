@@ -1,6 +1,7 @@
 #include "configwidget.h"
 #include "moduleeditordialog.h"
 #include <QTableWidgetItem>
+#include <QDebug>
 
 #define NUM_COLS 4
 #define NAME_COL_INDEX 0
@@ -9,7 +10,7 @@
 #define COMMENT_COL_INDEX 3
 
 /** ***************************************************************************/
-ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> *kcmServicesMap, QWidget *parent) 
+ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, std::shared_ptr<KCMService>> *kcmServicesMap, QWidget *parent) 
         : QWidget(parent), kcmServicesMap(kcmServicesMap) {
 
     ui.setupUi(this);
@@ -30,7 +31,7 @@ ExtraKdeSettings::ConfigWidget::ConfigWidget(QMap<QString, KCMService*> *kcmServ
         int row = ui.tableWidget->rowCount();
         ui.tableWidget->insertRow(row);
 
-        KCMService* servicePtr = kcmServicesMap->value(*iter);
+        std::shared_ptr<KCMService> servicePtr = kcmServicesMap->value(*iter);
         serviceList.push_back(servicePtr);
 
         QTableWidgetItem *nameItem = new QTableWidgetItem(*iter);
@@ -87,7 +88,7 @@ void ExtraKdeSettings::ConfigWidget::selectRow(int row) {
 
 void ExtraKdeSettings::ConfigWidget::toggleServiceActivation(int row, int column) {
     if(column == 0) {
-        KCMService* selectedService = serviceList.at(row);
+        std::shared_ptr<KCMService> selectedService = serviceList.at(row);
         QTableWidgetItem* nameItem = ui.tableWidget->item(row, NAME_COL_INDEX);
         selectedService->isActivated = nameItem->checkState() == Qt::Checked;
 
@@ -99,7 +100,7 @@ void ExtraKdeSettings::ConfigWidget::onEditModulePress() {
     int selectedRow = ui.tableWidget->currentRow();
 
     if(selectedRow != -1) {
-        KCMService* selectedService = serviceList.at(selectedRow);
+        std::shared_ptr<KCMService> selectedService = serviceList.at(selectedRow);
         QString previousDisplayName = selectedService->name;
         ModuleEditorDialog moduleEditorDialog(selectedService);
         

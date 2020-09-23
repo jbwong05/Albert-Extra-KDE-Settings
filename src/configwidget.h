@@ -8,7 +8,7 @@ namespace ExtraKdeSettings {
     class ConfigWidget final : public QWidget {
         Q_OBJECT
         public:
-            explicit ConfigWidget(QMap<QString, KCMService*> *kcmServicesMap, QWidget *parent = nullptr);
+            explicit ConfigWidget(QMap<QString, std::shared_ptr<KCMService>> *kcmServicesMap, QWidget *parent = nullptr);
             ~ConfigWidget();
             Ui::ConfigWidget ui;
 
@@ -20,8 +20,8 @@ namespace ExtraKdeSettings {
             void aliasesUpdated(QString &storageId, QStringList &aliases);
         
         private:
-            QMap<QString, KCMService*> *kcmServicesMap;
-            std::vector<KCMService*> serviceList;
+            QMap<QString, std::shared_ptr<KCMService>> *kcmServicesMap;
+            std::vector<std::shared_ptr<KCMService>> serviceList;
 
             void selectRow(int row);
             void toggleServiceActivation(int row, int column);

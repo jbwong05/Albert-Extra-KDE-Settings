@@ -10,7 +10,7 @@ namespace ExtraKdeSettings {
 
         public:
 
-            ModuleEditorDialog(KCMService* currentService, QWidget *parent = nullptr);
+            ModuleEditorDialog(std::shared_ptr<KCMService> currentService, QWidget *parent = nullptr);
             ~ModuleEditorDialog();
             Ui::ModuleEditorDialog ui;
 
@@ -19,7 +19,7 @@ namespace ExtraKdeSettings {
             void accept() override;
         
         private:
-            KCMService* currentService;
+            std::shared_ptr<KCMService> currentService;
 
             void onAddButtonPress();
             void onRemoveButtonPress();
