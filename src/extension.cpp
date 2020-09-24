@@ -43,53 +43,18 @@ class ExtraKdeSettings::Private {
         QMap<QString, QVariant> aliasSettings;
 
         ~Private() {
-            /*auto iter = kcmServicesMap.keyBegin();
-            while(iter != kcmServicesMap.keyEnd()) {
-                delete kcmServicesMap.value(*iter);
-                iter++;
-            }*/
+            offlineIndex.clear();
             kcmServicesMap.clear();
         }
 
-        void startLoadingSettingsModules();
-        void finishLoadingSettingsModules();
-        vector<shared_ptr<ExtraKdeSettings::KCMService>> loadSettingsModules() const;
+        void loadSettingsModules();
         QString generateQuery(const QString &strList) const;
         
 };
 
-void ExtraKdeSettings::Private::startLoadingSettingsModules() {
-    // Never run concurrent
-    if ( futureWatcher.future().isRunning() ) {
-        //rerun = true;
-        return;
-    }
-
-    // Run finishIndexing when the indexing thread finished
-    futureWatcher.disconnect();
-    QObject::connect(&futureWatcher, &QFutureWatcher<vector<shared_ptr<Core::StandardIndexItem>>>::finished,
-                     std::bind(&Private::finishLoadingSettingsModules, this));
-
-    // Run the indexer thread
-    futureWatcher.setFuture(QtConcurrent::run(this, &Private::loadSettingsModules));
-}
-
-void ExtraKdeSettings::Private::finishLoadingSettingsModules() {
-
-    // Get the thread results
-    index = futureWatcher.future().result();
-
-    // Rebuild the offline index
-    offlineIndex.clear();
-    for (const shared_ptr<ExtraKdeSettings::KCMService> &item : index) {
-        offlineIndex.add(item);
-        kcmServicesMap.insert(item->name, item);
-    }
-}
-
-vector<shared_ptr<ExtraKdeSettings::KCMService>> ExtraKdeSettings::Private::loadSettingsModules() const {
+void ExtraKdeSettings::Private::loadSettingsModules() {
     
-    vector<shared_ptr<KCMService>> settingsModules;
+    offlineIndex.clear();
     
     // Lookup kcm modules
     QString queryStr = generateQuery("");
@@ -126,8 +91,6 @@ vector<shared_ptr<ExtraKdeSettings::KCMService>> ExtraKdeSettings::Private::load
                 indexStrings.emplace_back(alias, UINT_MAX);
             }
 
-            //KCMService* currentService = new KCMService(isActivated, serviceStorgaeId, service->exec(), 
-            //        serviceName, serviceComment, serviceIcon, serviceAliases);
             shared_ptr<KCMService> newService = std::make_shared<KCMService>(isActivated, serviceStorageId, service->exec(), 
                     serviceName, serviceComment, serviceIcon, serviceAliases);
             newService->setIconPath(XDG::IconLookup::iconPath(serviceIcon));
@@ -138,11 +101,10 @@ vector<shared_ptr<ExtraKdeSettings::KCMService>> ExtraKdeSettings::Private::load
             newService->setIndexKeywords(std::move(indexStrings));
             newService->addAction(make_shared<ProcAction>(serviceName, QStringList(Core::ShUtil::split(service->exec()))));
 
-            settingsModules.push_back(std::move(newService));
-            //kcmServicesMap.insert(serviceName, newService);
+            offlineIndex.add(newService);
+            kcmServicesMap.insert(serviceName, newService);
         }
     }
-    return settingsModules;
 }
 
 QString ExtraKdeSettings::Private::generateQuery(const QString &str) const {
@@ -184,7 +146,7 @@ ExtraKdeSettings::Extension::Extension()
 }
 
 void ExtraKdeSettings::Extension::loadSettingsModules() {
-    d->startLoadingSettingsModules();
+    d->loadSettingsModules();
 }
 
 
