@@ -14,11 +14,11 @@
 using namespace Core;
 using namespace std;
 
-#define ACTIVATED_SETTINGS ALBERT_EXTENSION_IID"-activated"
-#define NAME_SETTINGS ALBERT_EXTENSION_IID"-names"
-#define ICON_SETTINGS ALBERT_EXTENSION_IID"-icon_names"
-#define COMMENT_SETTINGS ALBERT_EXTENSION_IID"-comments"
-#define ALIAS_SETTINGS ALBERT_EXTENSION_IID"-aliases"
+#define ACTIVATED_SETTINGS "activated"
+#define NAME_SETTINGS "names"
+#define ICON_SETTINGS "icon_names"
+#define COMMENT_SETTINGS "comments"
+#define ALIAS_SETTINGS "aliases"
 
 #define FALLBACK_ICON "preferences-system"
 
