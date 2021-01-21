@@ -1,4 +1,5 @@
 # Albert Extra KDE Settings
+*Note: The current build only supports Albert v0.16.4 and under. Support for Albert v0.17 is coming soon!
 
 ## Description
 QPlugin for the [Albert Launcher](https://albertlauncher.github.io/) that exposes all kcm settings modules to [Albert](https://albertlauncher.github.io/). The specific modules can be listed by running `kcmshell5 --list`. The previous version of this plugin only exposed certain modules to [Albert](https://albertlauncher.github.io/) and relied on hardcoding for its functionality and customization. If you wish to use the old version, it can still be found on a separate branch [here](https://github.com/jbwong05/Albert-Extra-KDE-Settings/tree/hardcoded_1.0). This new version exposes all kcm modules to [Albert](https://albertlauncher.github.io/) without any hardcoding. All customizations can now be done using the extension's config page found under the Extensions tab of the Albert settings.
