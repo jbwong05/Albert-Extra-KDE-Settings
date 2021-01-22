@@ -27,6 +27,7 @@ class ExtraKdeSettings::Private {
         QPointer<ConfigWidget> widget;
 
         QMap<QString, KCMService*> kcmServicesMap;
+        QMap<KCMService*, shared_ptr<Core::StandardItem>> items;
         vector<KCMService*> widgetList;
 
         QMap<QString, QVariant> activatedSettings;
@@ -42,6 +43,7 @@ class ExtraKdeSettings::Private {
                 iter++;
             }
             kcmServicesMap.clear();
+            items.clear();
             widgetList.clear();
         }
         
@@ -86,7 +88,7 @@ ExtraKdeSettings::Extension::Extension()
             }
 
             // Cache the icon path during initialization for faster searching later
-            XDG::IconLookup::iconPath(serviceIcon);
+            QString iconPath = XDG::IconLookup::iconPath(serviceIcon);
 
             QString serviceComment = d->commentSettings.contains(serviceStorgaeId) ? d->commentSettings.value(serviceStorgaeId).toString() : service->comment();
 
@@ -95,8 +97,17 @@ ExtraKdeSettings::Extension::Extension()
                 serviceAliases = d->aliasSettings.value(serviceStorgaeId).toStringList();
             }
 
-            d->kcmServicesMap.insert(serviceName, new KCMService(isActivated, serviceStorgaeId, service->exec(), 
-                    serviceName, serviceComment, serviceIcon, serviceAliases));
+            auto item = make_shared<StandardItem>(serviceName);
+            item->setText(serviceName);
+            item->setSubtext(serviceComment);
+            item->setIconPath(iconPath);
+            item->addAction(make_shared<ProcAction>(serviceName, QStringList(Core::ShUtil::split(service->exec()))));
+
+            KCMService *currentService = new KCMService(isActivated, serviceStorgaeId, service->exec(), 
+                    serviceName, serviceComment, serviceIcon, serviceAliases);
+
+            d->kcmServicesMap.insert(serviceName, currentService);
+            d->items.insert(currentService, item);
         }
     }
 }
@@ -156,6 +167,8 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
 
     if ( query->string().isEmpty())
         return;
+    
+    vector<pair<shared_ptr<Core::StandardItem>, uint>> matches;
 
     // Checks for matches
     auto iter = d->kcmServicesMap.keyBegin();
@@ -201,23 +214,14 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
             }
 
             if(matchFound) {
-                auto item = make_shared<StandardItem>(currentServiceName);
-                item->setText(currentServiceName);
-                item->setSubtext(currentServiceComment);
-
-                QString iconPath = XDG::IconLookup::iconPath(servicePtr->iconName);
-                if(iconPath == "") {
-                    iconPath = XDG::IconLookup::iconPath(FALLBACK_ICON);
-                }
-
-                item->setIconPath(iconPath);
-                item->addAction(make_shared<ProcAction>(currentServiceName, QStringList(Core::ShUtil::split(servicePtr->exec))));
-                query->addMatch(std::move(item), score);
+                matches.emplace_back(static_pointer_cast<Core::StandardItem>(d->items[servicePtr]), score);
             }
         }
 
         iter++;
     }
+
+    query->addMatches(matches.begin(), matches.end());
 }
 
 QString ExtraKdeSettings::Extension::generateQuery(const QString &str) const {
