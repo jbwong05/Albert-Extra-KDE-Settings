@@ -10,6 +10,11 @@
 #include "configwidget.h"
 #include "extension.h"
 #include "KCMService.h"
+Q_LOGGING_CATEGORY(qlc, "apps")
+#define DEBG qCDebug(qlc,).noquote()
+#define INFO qCInfo(qlc,).noquote()
+#define WARN qCWarning(qlc,).noquote()
+#define CRIT qCCritical(qlc,).noquote()
 using namespace Core;
 using namespace std;
 

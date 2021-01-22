@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QLoggingCategory>
 #include <memory>
 #include <string>
 #include <KService>
@@ -7,6 +8,7 @@
 #include <QString>
 #include "albert/extension.h"
 #include "albert/queryhandler.h"
+Q_DECLARE_LOGGING_CATEGORY(qlc)
 
 using namespace std;
 
