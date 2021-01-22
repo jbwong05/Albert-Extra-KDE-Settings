@@ -1,7 +1,7 @@
 {
     "id" :              "org.albert.extension.extrakdesettings",
     "name" :            "Extra KDE Settings",
-    "version" :         "2.1",
+    "version" :         "2.2",
     "platform" :        "All",
     "group" :           "Extensions",
     "author" :          "Joshua Wong",
