@@ -9,100 +9,109 @@
 namespace Core {
 
 
-//! @brief Base class for standard actions
 struct EXPORT_CORE StandardActionBase : public Action
 {
-public:
-    StandardActionBase(const QString &text);
+    /**
+     * @brief Base class for standard actions implementing the text getter
+     * @param text The description of the action
+     */
+    explicit StandardActionBase(const QString &text);
     QString text() const override;
-
 private:
     QString text_;
 };
 
 
-
-//! @brief A standard action holding a std::function
 struct EXPORT_CORE FuncAction : public StandardActionBase
 {
-public:
-    FuncAction(const QString &text, std::function<void()> action);
-    void activate() override;
-
+    /**
+     * @brief Runs a function
+     * @param text The description of the action
+     * @param action The fuction to execute
+     */
+    explicit FuncAction(const QString &text, std::function<void()> action);
+    void activate() const override;
 private:
     std::function<void()> action_;
 };
+#define makeFuncAction std::make_shared<Core::FuncAction>
 
 
-
-// A standard action that copies text into the clipboard
 struct EXPORT_CORE ClipAction : public StandardActionBase
 {
-public:
-    ClipAction(const QString &text, QString clipBoardText);
-    void activate() override;
-
+    /**
+     * @brief Copies text into the clipboard
+     * @param text The description of the action
+     * @param clipBoardText The text to put in the clipboard
+     */
+    explicit ClipAction(const QString &text, const QString &clipBoardText);
+    void activate() const override;
 private:
     QString clipBoardText_;
 };
+#define makeClipAction std::make_shared<Core::ClipAction>
 
-
-
-// A standard action that opens an url using QDesktopServices
 struct EXPORT_CORE UrlAction : public StandardActionBase
 {
-public:
-    UrlAction(const QString &text, QUrl url);
-    void activate() override;
-
+    /**
+     * @brief Opens an URL using the system scheme/mime hanlders
+     * @param text The description of the action
+     * @param commandline The URL to open with the correspondig handler
+     */
+    explicit UrlAction(const QString &text, const QUrl &url);
+    void activate() const override;
 private:
-    QUrl url_ ;
+    QUrl url_;
 };
+#define makeUrlAction std::make_shared<Core::UrlAction>
 
 
-
-// A standard action that starts a process
 struct EXPORT_CORE ProcAction : public StandardActionBase
 {
-public:
-    ProcAction(const QString &text, const QStringList &commandline, const QString &workingDirectory = QString());
-    void activate() override;
-
+    /**
+     * @brief Starts a detached process
+     * @param text The description of the action
+     * @param commandline The program with arguments to execute
+     * @param workingDirectory The working directory
+     */
+    explicit ProcAction(const QString &text, const QStringList &commandline, const QString &workingDirectory = QString());
+    void activate() const override;
 protected:
     QStringList commandline_;
     QString workingDir_;
 };
+#define makeProcAction std::make_shared<Core::ProcAction>
 
 
-
-// A standard action that runs commands in a terminal
-struct EXPORT_CORE TermAction : public ProcAction
+struct EXPORT_CORE TermAction : public StandardActionBase
 {
-    enum class CloseBehavior {
+    enum CloseBehavior {
         CloseOnSuccess,
         CloseOnExit,
         DoNotClose
     };
 
-public:
+    /**
+     * @brief Runs a commandline in a detached user definded terminal
+     * @param text The description of the action
+     * @param commandline The commandline to run
+     * @param workingDirectory The working directory
+     */
+    explicit TermAction(const QString &text, const QStringList &commandline, const QString &workingDirectory = QString());
 
     /**
-     * @brief TermAction constructor
+     * @brief Executes a script wrapped in the user shell in a detached user definded terminal
      * @param text The description of the action
-     * @param commandline The command to execute
-     * @param workingDirectory The working directory where to run the command
-     * @param shell Should the command be wrapped in a shell?
-     * @param behavior The close behavior when using the shell
+     * @param script The shell script to execute
+     * @param closeBehavior What happens when the script finished
+     * @param workingDirectory The working directory
      */
-    TermAction(const QString &text, const QStringList &commandline, const QString &workingDirectory = QString(),
-               bool shell = true, CloseBehavior behavior = CloseBehavior::CloseOnSuccess);
-    void activate() override;
-
+    explicit TermAction(const QString &text, const QString &script, CloseBehavior closeBehavior = CloseOnSuccess, const QString &workingDirectory = QString());
+    void activate() const override;
 private:
-    bool shell_;
-    CloseBehavior behavior_;
+    QStringList commandline_;
+    QString workingDir_;
 };
-
-
+#define makeTermAction std::make_shared<Core::TermAction>
 
 }

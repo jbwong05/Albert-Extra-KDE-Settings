@@ -9,6 +9,7 @@
 namespace Core {
 
 class Action;
+typedef std::vector<std::shared_ptr<Action>> ActionList;
 
 /** ****************************************************************************
  * @brief The item interface
@@ -40,14 +41,14 @@ public:
     /** The declarative subtext for the item */
     virtual QString subtext() const = 0;
 
+    /** The alternative actions of the item*/
+    virtual ActionList actions() = 0;
+
     /** The string to use for completion */
-    virtual QString completion() const { return text(); }
+    virtual QString completion() const { return QString(); }  // Null semantic
 
     /** Urgency level of the item, defautls to "Normal" */
     virtual Urgency urgency() const { return Urgency::Normal; }
-
-    /** The alternative actions of the item*/
-    virtual std::vector<std::shared_ptr<Action>> actions() = 0;
 
 };
 
