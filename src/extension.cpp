@@ -5,7 +5,6 @@
 #include <KServiceTypeTrader>
 #include "albert/util/standarditem.h"
 #include "xdg/iconlookup.h"
-#include "albert/util/shutil.h"
 #include "albert/util/standardactions.h"
 #include "albert/util/standarditem.h"
 #include "configwidget.h"
@@ -101,7 +100,7 @@ ExtraKdeSettings::Extension::Extension()
             item->setText(serviceName);
             item->setSubtext(serviceComment);
             item->setIconPath(iconPath);
-            item->addAction(make_shared<ProcAction>(serviceName, QStringList(Core::ShUtil::split(service->exec()))));
+            item->addAction(make_shared<ProcAction>(serviceName, service->exec().split(" ")));
 
             KCMService *currentService = new KCMService(isActivated, serviceStorgaeId, service->exec(), 
                     serviceName, serviceComment, serviceIcon, serviceAliases);
@@ -201,7 +200,7 @@ void ExtraKdeSettings::Extension::handleQuery(Core::Query * query) const {
 
                 if(!matchFound) {
                     // Check service comment
-                    QStringList wordsInComment = QStringList(Core::ShUtil::split(servicePtr->comment));
+                    QStringList wordsInComment = QStringList(servicePtr->comment.split(" "));
                     auto iter = wordsInComment.begin();
                     while(!matchFound && iter != wordsInComment.end()) {
                         if((*iter).contains(query->string()), Qt::CaseInsensitive) {
