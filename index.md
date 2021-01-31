@@ -1,37 +1,41 @@
-## Welcome to GitHub Pages
+# Albert Extra KDE Settings
 
-You can use the [editor on GitHub](https://github.com/jbwong05/Albert-Extra-KDE-Settings/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+## Description
+QPlugin for the [Albert Launcher](https://albertlauncher.github.io/) that exposes all kcm settings modules to [Albert](https://albertlauncher.github.io/). The specific modules can be listed by running `kcmshell5 --list`. The previous version of this plugin only exposed certain modules to [Albert](https://albertlauncher.github.io/) and relied on hardcoding for its functionality and customization. If you wish to use the old version, it can still be found on a separate branch [here](https://github.com/jbwong05/Albert-Extra-KDE-Settings/tree/hardcoded_1.0). This new version exposes all kcm modules to [Albert](https://albertlauncher.github.io/) without any hardcoding. All customizations can now be done using the extension's config page found under the Extensions tab of the Albert settings.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Dependencies
+* KF5Service
 
-### Markdown
+This plugin also shares the same dependencies that are needed to build [Albert](https://albertlauncher.github.io/) from sources. Information about building [Albert](https://albertlauncher.github.io/) from sources and its dependencies can be found [here](https://albertlauncher.github.io/docs/installing/).
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+## Installation
 
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+### Option 1: Compile alongside Albert
+```
+git clone --recursive https://github.com/albertlauncher/albert.git
+cd albert/plugins
+git submodule add https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
+./Albert-Extra-KDE-Settings/updateCMakeLists.sh
+cd ..
+mkdir albert-build
+cd albert-build
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+make
+sudo make install
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+### Option 2: Compile separately from Albert
+```
+git clone https://github.com/jbwong05/Albert-Extra-KDE-Settings.git
+cd Albert-Extra-KDE-Settings
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SEPARATELY=ON ..
+make
+sudo make install
+```
 
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/jbwong05/Albert-Extra-KDE-Settings/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+## Uninstallation
+```
+sudo rm -f /usr/lib/albert/plugins/libextrakdesettings.so
+```
