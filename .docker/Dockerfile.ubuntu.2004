@@ -1,0 +1,23 @@
+FROM ubuntu:20.04
+
+RUN export DEBIAN_FRONTEND=noninteractive \
+ && apt-get -qq update \
+ && apt-get -qq upgrade \
+ && apt-get install --no-install-recommends -y \
+        curl \
+        gpg \
+        ca-certificates \
+ && echo 'deb http://download.opensuse.org/repositories/home:/manuelschneid3r/xUbuntu_20.04/ /' | tee /etc/apt/sources.list.d/home:manuelschneid3r.list \
+ && curl -fsSL https://download.opensuse.org/repositories/home:manuelschneid3r/xUbuntu_20.04/Release.key | gpg --dearmor | tee /etc/apt/trusted.gpg.d/home_manuelschneid3r.gpg > /dev/null \
+ && apt-get -qq update \
+ && apt-get install --no-install-recommends -y \
+        cmake \
+	make \
+        g++ \
+        albert \
+        qtbase5-dev \
+        libkf5service-dev
+
+COPY . /src
+WORKDIR /build
+RUN rm -rf * && cmake /src -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SEPARATELY=ON && make

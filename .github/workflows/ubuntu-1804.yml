@@ -1,0 +1,18 @@
+name: Ubuntu 18.04
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: docker build . --file ./.docker/Dockerfile.ubuntu.1804 --tag albert-exta-kde-settings-ubuntu-1804:$(date +%s)

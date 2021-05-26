@@ -1,0 +1,17 @@
+FROM fedora:latest
+
+RUN yum install -y \
+    curl \
+    gpg \
+    ca-certificates \
+    cmake \
+    gcc-c++ \
+    qt5-qtbase-devel \
+    dnf-plugins-core \
+    kf5-kservice-devel \
+&& dnf config-manager --add-repo https://download.opensuse.org/repositories/home:manuelschneid3r/Fedora_33/home:manuelschneid3r.repo \
+&& dnf install albert -y
+
+COPY . /src
+WORKDIR /build
+RUN rm -rf * && cmake /src -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DBUILD_SEPARATELY=ON && make
