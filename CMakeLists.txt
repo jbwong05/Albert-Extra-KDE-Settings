@@ -33,7 +33,7 @@ if(BUILD_SEPARATELY)
     # Set the RPATH for the library lookup
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../")
 
-    set(ALBERT_PATH /usr/lib/x86_64-linux-gnu/albert/)
+    set(ALBERT_PATH /usr/lib/x86_64-linux-gnu/albert/ /usr/lib64/albert)
 
     find_library(ALBERT NAMES albert libalbert PATHS ${ALBERT_PATH})
     if(NOT ALBERT)
